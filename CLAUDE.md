@@ -30,17 +30,17 @@ curl -X POST http://localhost:8080/workspaces/room/artifacts/hvac/properties/tem
 
 JaCaMo integrates three frameworks, each corresponding to a lab:
 
-| Dimension | Framework | Lab |
-|-----------|-----------|-----|
-| Agent (BDI reasoning) | Jason (.asl files) | lab1, lab2 |
-| Environment (artifacts) | CArtAgO (Java classes in `src/env/`) | lab3 |
-| Organisation (norms/roles) | Moise (XML in `src/org/`) | lab4 |
+| Dimension                  | Framework                            | Lab        |
+|:---------------------------|:-------------------------------------|:-----------|
+| Agent (BDI reasoning)      | Jason (.asl files)                   | lab1, lab2 |
+| Environment (artifacts)    | CArtAgO (Java classes in `src/env/`) | lab3       |
+| Organisation (norms/roles) | Moise (XML in `src/org/`)            | lab4       |
 
 ### Project Structure Pattern
 
 Every sub-project follows this layout:
 
-```
+```text
 <project>/
   *.jcm              # MAS configuration: agents, workspaces, organisations, platform
   build.gradle       # Gradle build; main class is jacamo.infra.JaCaMoLauncher
@@ -67,6 +67,58 @@ Every sub-project follows this layout:
 - **lab2** — multi-agent with message passing (performatives: `tell`, `signal`, `askOne`); exercises on a voting protocol via direct communication
 - **lab3** — replaces message-based voting with a `VotingMachine` artifact; introduces CArtAgO observable properties, `focus`, artifact linking, and linked operations
 - **lab4** — adds Moise organisation (`smart_house.xml`) with roles (`controller`, `assistant`), missions (`mController`, `mVote`), and a `decide_temp` scheme; exercises on organisational events (`oblFulfilled`, `goalState`)
+
+## CNP Project (Practical Assignment)
+
+The `cnp/` directory contains the practical assignment: a Contract Net Protocol simulation
+with n initiators, m participants, and i parallel contracts per initiator.
+
+### Running
+
+```bash
+cd cnp
+./gradlew run           # single run with current cnp.jcm
+```
+
+JaCaMo does not self-exit — press `Ctrl+C` after the last `[DONE]` line appears.
+
+### Experiment automation
+
+```bash
+cd cnp
+python3 experiment.py                    # run full DEFAULT_MATRIX (6 configs)
+python3 experiment.py --n 5 --m 10 --i 3  # single config
+```
+
+`experiment.py` generates `cnp.jcm`, runs JaCaMo with a 20s timeout, parses `[METRIC]`
+lines, and prints a comparison table. Logs are saved to `cnp/results/`.
+
+### Metrics
+
+Initiators emit structured `[METRIC]` lines at contract end. Parse them with:
+
+```bash
+./gradlew run > run.log 2>&1
+python3 metrics.py < run.log
+```
+
+### Key files
+
+| File                          | Purpose                                         |
+|:------------------------------|:------------------------------------------------|
+| `cnp/cnp.jcm`                 | MAS config; edit to change n, m, i manually    |
+| `cnp/src/agt/initiator.asl`   | CFP broadcast, winner selection, metric logging |
+| `cnp/src/agt/participant.asl` | Price strategies, task simulation               |
+| `cnp/experiment.py`           | Automated experiment matrix runner              |
+| `cnp/metrics.py`              | `[METRIC]` line parser and summary printer      |
+| `cnp/README.md`               | Full project documentation                      |
+
+### Parameters
+
+- **n** — number of initiators (add/remove `agent inX` blocks in `cnp.jcm`)
+- **m** — number of participants (add/remove `agent paX` blocks)
+- **i** — parallel contracts per initiator (length of `contracts([...])` list)
+- Participant strategies: `random`, `fixed`, `aggressive`, `conservative`
 
 ## Tooling
 
