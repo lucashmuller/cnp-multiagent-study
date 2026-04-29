@@ -37,36 +37,39 @@
       ConvId = cnp(Me, Idx);
       ?service(Svc);
       Budget = 150;
+      .time(H0,M0,S0,Ms0); T0 = H0*3600000 + M0*60000 + S0*1000 + Ms0;
       .println("[", Me, "/", Idx, "] CFP service=", Svc, " budget=", Budget);
       .broadcast(tell, cfp(ConvId, Svc, Budget));
-      // Wait for proposals to arrive (3 seconds)
       .wait(3000);
-      // Collect all proposals received for this ConvId
       .findall(p(Price, Sender), propose(ConvId, Price)[source(Sender)], Proposals);
       .length(Proposals, NP);
       .println("[", Me, "/", Idx, "] received ", NP, " proposals: ", Proposals);
-      !evaluate_proposals(ConvId, Proposals);
-      // Cleanup beliefs for this conversation
+      +cfp_time(ConvId, T0);
+      !evaluate_proposals(ConvId, Svc, Proposals);
       .abolish(propose(ConvId, _));
       .abolish(refuse(ConvId)).
 
 // =============================================================================
 // No proposals -- CNP fails
 // =============================================================================
-+!evaluate_proposals(ConvId, [])
-   <- .println("[FAIL] ", ConvId, " -- no proposals received").
++!evaluate_proposals(ConvId, Svc, [])
+   <- ?cfp_time(ConvId, T0);
+      .time(H1,M1,S1,Ms1); T1 = H1*3600000 + M1*60000 + S1*1000 + Ms1; Elapsed = T1 - T0;
+      .println("[FAIL] ", ConvId, " -- no proposals received");
+      .println("[METRIC] result=fail conv=", ConvId, " service=", Svc, " proposals=0 elapsed_ms=", Elapsed);
+      .abolish(cfp_time(ConvId, _)).
 
 // =============================================================================
 // At least one proposal -- pick winner (lowest price) and close
 // =============================================================================
-+!evaluate_proposals(ConvId, Proposals) : Proposals \== []
++!evaluate_proposals(ConvId, Svc, Proposals) : Proposals \== []
    <- !find_winner(Proposals, p(999999, none), p(WinPrice, WinAgent));
+      .length(Proposals, NP);
       .println("[WIN]  ", ConvId, " -> ", WinAgent, " price=", WinPrice);
       .send(WinAgent, tell, accept_proposal(ConvId, WinPrice));
       !reject_others(ConvId, Proposals, WinAgent);
-      // Wait up to 10 seconds for task completion
       .wait(inform_done(ConvId), 10000, _);
-      !check_done(ConvId, WinAgent);
+      !check_done(ConvId, Svc, NP, WinPrice, WinAgent);
       .abolish(inform_done(ConvId)).
 
 // =============================================================================
@@ -92,10 +95,22 @@
 // Check outcome by querying the belief base directly after .wait
 // Guard on inform_done(ConvId) tells us if the task completed in time
 // =============================================================================
-+!check_done(ConvId, Agent) : inform_done(ConvId)
-   <- .println("[DONE] ", ConvId, " completed by ", Agent).
-+!check_done(ConvId, _)
-   <- .println("[WARN] ", ConvId, " -- timeout waiting for inform_done").
++!check_done(ConvId, Svc, NP, WinPrice, WinAgent) : inform_done(ConvId)
+   <- ?cfp_time(ConvId, T0);
+      .time(H1,M1,S1,Ms1); T1 = H1*3600000 + M1*60000 + S1*1000 + Ms1; Elapsed = T1 - T0;
+      .println("[DONE] ", ConvId, " completed by ", WinAgent);
+      .println("[METRIC] result=done conv=", ConvId, " service=", Svc,
+               " proposals=", NP, " winner=", WinAgent,
+               " price=", WinPrice, " elapsed_ms=", Elapsed);
+      .abolish(cfp_time(ConvId, _)).
++!check_done(ConvId, Svc, NP, WinPrice, WinAgent)
+   <- ?cfp_time(ConvId, T0);
+      .time(H1,M1,S1,Ms1); T1 = H1*3600000 + M1*60000 + S1*1000 + Ms1; Elapsed = T1 - T0;
+      .println("[WARN] ", ConvId, " -- timeout waiting for inform_done");
+      .println("[METRIC] result=timeout conv=", ConvId, " service=", Svc,
+               " proposals=", NP, " winner=", WinAgent,
+               " price=", WinPrice, " elapsed_ms=", Elapsed);
+      .abolish(cfp_time(ConvId, _)).
 
 // =============================================================================
 // Log incoming refusals (belief added automatically by Jason tell)
@@ -105,3 +120,4 @@
 
 { include("$jacamoJar/templates/common-cartago.asl") }
 { include("$jacamoJar/templates/common-moise.asl") }
+
