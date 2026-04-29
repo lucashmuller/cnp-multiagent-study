@@ -17,9 +17,10 @@
 
 +!start
    <- ?contracts(Indices);
+      ?service(Svc);
       .my_name(Me);
       .length(Indices, N);
-      .println("[", Me, "] launching ", N, " parallel CNP(s) for service: ", Me);
+      .println("[", Me, "] launching ", N, " parallel CNP(s) for service: ", Svc);
       !launch_all(Indices).
 
 // Spawn one new intention per contract index (concurrent execution)
