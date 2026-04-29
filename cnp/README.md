@@ -6,7 +6,7 @@ executando i contratos em paralelo.
 
 ## Estrutura de arquivos
 
-```
+```text
 cnp/
 ├── cnp.jcm                   # Configuracao da MAS: lista de agentes e crencas iniciais
 ├── build.gradle              # Build Gradle; roda com jacamo.infra.JaCaMoLauncher
@@ -22,7 +22,7 @@ cnp/
 
 ## Como o protocolo funciona
 
-```
+```text
 Initiator                              Participants
     |                                       |
     |-- broadcast cfp(ConvId, Svc, 150) --> todos
@@ -51,10 +51,12 @@ distintas nao se misturem.
 ### initiator.asl
 
 Crencas injetadas pelo `cnp.jcm`:
+
 - `contracts([1,..,i])` — indices dos contratos a executar em paralelo
 - `service(compute|storage|network)` — tipo de servico solicitado
 
 Fluxo por contrato:
+
 1. Gera `ConvId = cnp(Me, Idx)` e registra o timestamp de inicio
 2. Faz broadcast do `cfp(ConvId, Svc, 150)`
 3. Aguarda 3 segundos e coleta todas as crencas `propose(ConvId, _)`
@@ -66,17 +68,18 @@ Fluxo por contrato:
 ### participant.asl
 
 Crencas injetadas pelo `cnp.jcm`:
+
 - `service(compute|storage|network)` — servico oferecido
 - `strategy(random|fixed|aggressive|conservative)` — estrategia de preco
 
 Estrategias de preco:
 
-| Estrategia   | Precos possiveis         | Comportamento esperado          |
-|--------------|--------------------------|----------------------------------|
-| random       | 55, 80, 100, 120, 145    | Resultado imprevisivel           |
-| fixed        | 80                       | Preco constante, competitivo     |
-| aggressive   | 30, 35, 40, 45, 50       | Ganha com frequencia             |
-| conservative | 100, 110, 120, 135, 150  | Raramente vence                  |
+| Estrategia   | Precos possiveis        | Comportamento esperado      |
+|:-------------|:------------------------|:----------------------------|
+| random       | 55, 80, 100, 120, 145   | Resultado imprevisivel      |
+| fixed        | 80                      | Preco constante, competitivo|
+| aggressive   | 30, 35, 40, 45, 50      | Ganha com frequencia        |
+| conservative | 100, 110, 120, 135, 150 | Raramente vence             |
 
 Ao receber `accept_proposal`, simula execucao com tempo aleatorio (500ms, 1s ou 2s)
 e envia `inform_done` ao iniciador.
@@ -85,17 +88,17 @@ e envia `inform_done` ao iniciador.
 
 O arquivo `cnp.jcm` define n, m e i:
 
-| Parametro | Significado                          | Restricao  |
-|-----------|--------------------------------------|------------|
-| n         | Numero de iniciadores                | 1 < n < 200 |
-| m         | Numero de participantes              | 1 < m < 50  |
-| i         | Contratos paralelos por iniciador    | 0 < i < 10  |
+| Parametro | Significado                       | Restricao   |
+|:----------|:----------------------------------|:------------|
+| n         | Numero de iniciadores             | 1 < n < 200 |
+| m         | Numero de participantes           | 1 < m < 50  |
+| i         | Contratos paralelos por iniciador | 0 < i < 10  |
 
 Total de contratos na rodada = `n × i`.
 
 Exemplo de `cnp.jcm` com n=2, m=3, i=2:
 
-```
+```jason
 mas cnp {
     agent in1 : initiator.asl {
         beliefs: contracts([1,2]), service(compute)
@@ -136,7 +139,7 @@ python3 metrics.py < run.log
 
 Saida de exemplo:
 
-```
+```text
 ==================================================
   CNP Metrics Summary  (15 contracts)
 ==================================================
@@ -181,14 +184,14 @@ python3 experiment.py --n 10 --m 5 --i 2
 
 Matriz padrao:
 
-| Label         |  n |  m |  i | Total contratos | Objetivo                         |
-|---------------|----|----|-----|-----------------|----------------------------------|
-| n2_m5_i1      |  2 |  5 |  1 |  2              | Baseline minimo                  |
-| n5_m10_i3     |  5 | 10 |  3 | 15              | Baseline principal               |
-| n10_m10_i3    | 10 | 10 |  3 | 30              | Efeito de mais iniciadores       |
-| n20_m10_i5    | 20 | 10 |  5 | 100             | Carga alta                       |
-| n5_m3_i3      |  5 |  3 |  3 | 15              | Participantes escassos           |
-| n5_m20_i3     |  5 | 20 |  3 | 15              | Participantes abundantes         |
+| Label      |  n |  m | i | Total contratos | Objetivo                   |
+|:-----------|---:|---:|--:|----------------:|:---------------------------|
+| n2_m5_i1   |  2 |  5 | 1 |               2 | Baseline minimo            |
+| n5_m10_i3  |  5 | 10 | 3 |              15 | Baseline principal         |
+| n10_m10_i3 | 10 | 10 | 3 |              30 | Efeito de mais iniciadores |
+| n20_m10_i5 | 20 | 10 | 5 |             100 | Carga alta                 |
+| n5_m3_i3   |  5 |  3 | 3 |              15 | Participantes escassos     |
+| n5_m20_i3  |  5 | 20 | 3 |              15 | Participantes abundantes   |
 
 ### Rodar com shell script (log + resumo por arquivo)
 
@@ -204,19 +207,19 @@ Gera `results/<label>.log` e `results/<label>_summary.txt`.
 
 Cada contrato emite uma linha `[METRIC]` no formato:
 
-```
+```text
 [METRIC] result=done conv=cnp(in1,2) service=compute proposals=4 winner=pa7 price=35 elapsed_ms=5019
 ```
 
-| Campo        | Valores possiveis          | Descricao                              |
-|--------------|----------------------------|----------------------------------------|
-| result       | done / fail / timeout      | Desfecho do contrato                   |
-| conv         | cnp(NomeAgente, Idx)       | Identificador unico da conversa        |
-| service      | compute / storage / network | Tipo de servico solicitado             |
-| proposals    | inteiro >= 0               | Propostas recebidas                    |
-| winner       | nome do agente             | Vencedor (ausente em fail)             |
-| price        | inteiro                    | Preco aceito (ausente em fail)         |
-| elapsed_ms   | inteiro                    | Tempo total desde o CFP ate o DONE     |
+| Campo      | Valores possiveis           | Descricao                          |
+|:-----------|:----------------------------|:-----------------------------------|
+| result     | done / fail / timeout       | Desfecho do contrato               |
+| conv       | cnp(NomeAgente, Idx)        | Identificador unico da conversa    |
+| service    | compute / storage / network | Tipo de servico solicitado         |
+| proposals  | inteiro >= 0                | Propostas recebidas                |
+| winner     | nome do agente              | Vencedor (ausente em fail)         |
+| price      | inteiro                     | Preco aceito (ausente em fail)     |
+| elapsed_ms | inteiro                     | Tempo total desde o CFP ate o DONE |
 
 ## Interpretando os resultados
 
