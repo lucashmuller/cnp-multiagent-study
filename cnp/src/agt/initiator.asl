@@ -37,7 +37,7 @@
       ConvId = cnp(Me, Idx);
       ?service(Svc);
       Budget = 150;
-      .time(H0,M0,S0,Ms0); T0 = H0*3600000 + M0*60000 + S0*1000 + Ms0;
+      !now(T0);
       .println("[", Me, "/", Idx, "] CFP service=", Svc, " budget=", Budget);
       .broadcast(tell, cfp(ConvId, Svc, Budget));
       .wait(3000);
@@ -54,7 +54,7 @@
 // =============================================================================
 +!evaluate_proposals(ConvId, Svc, [])
    <- ?cfp_time(ConvId, T0);
-      .time(H1,M1,S1,Ms1); T1 = H1*3600000 + M1*60000 + S1*1000 + Ms1; Elapsed = T1 - T0;
+      !now(T1); Elapsed = T1 - T0;
       .println("[FAIL] ", ConvId, " -- no proposals received");
       .println("[METRIC] result=fail conv=", ConvId, " service=", Svc, " proposals=0 elapsed_ms=", Elapsed);
       .abolish(cfp_time(ConvId, _)).
@@ -71,6 +71,13 @@
       .wait(inform_done(ConvId), 10000, _);
       !check_done(ConvId, Svc, NP, WinPrice, WinAgent);
       .abolish(inform_done(ConvId)).
+
+// =============================================================================
+// Helper: current time in milliseconds (epoch-of-day)
+// =============================================================================
++!now(T)
+   <- .time(H, M, S, Ms);
+      T = H*3600000 + M*60000 + S*1000 + Ms.
 
 // =============================================================================
 // Iterative minimum-price winner selection (no arithmetic needed)
@@ -97,7 +104,7 @@
 // =============================================================================
 +!check_done(ConvId, Svc, NP, WinPrice, WinAgent) : inform_done(ConvId)
    <- ?cfp_time(ConvId, T0);
-      .time(H1,M1,S1,Ms1); T1 = H1*3600000 + M1*60000 + S1*1000 + Ms1; Elapsed = T1 - T0;
+      !now(T1); Elapsed = T1 - T0;
       .println("[DONE] ", ConvId, " completed by ", WinAgent);
       .println("[METRIC] result=done conv=", ConvId, " service=", Svc,
                " proposals=", NP, " winner=", WinAgent,
@@ -105,7 +112,7 @@
       .abolish(cfp_time(ConvId, _)).
 +!check_done(ConvId, Svc, NP, WinPrice, WinAgent)
    <- ?cfp_time(ConvId, T0);
-      .time(H1,M1,S1,Ms1); T1 = H1*3600000 + M1*60000 + S1*1000 + Ms1; Elapsed = T1 - T0;
+      !now(T1); Elapsed = T1 - T0;
       .println("[WARN] ", ConvId, " -- timeout waiting for inform_done");
       .println("[METRIC] result=timeout conv=", ConvId, " service=", Svc,
                " proposals=", NP, " winner=", WinAgent,

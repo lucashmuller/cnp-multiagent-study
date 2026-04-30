@@ -18,12 +18,14 @@
       !compute_price(S, Price);
       .my_name(Me);
       .println("[", Me, "] propose ", Price, " for ", ConvId, " to ", Initiator);
-      .send(Initiator, tell, propose(ConvId, Price)).
+      .send(Initiator, tell, propose(ConvId, Price));
+      .abolish(cfp(ConvId, _, _)).
 
 // CFP does not match our service type -- refuse
 +cfp(ConvId, Svc, _)[source(Initiator)]
    : not service(Svc)
-   <- .send(Initiator, tell, refuse(ConvId)).
+   <- .send(Initiator, tell, refuse(ConvId));
+      .abolish(cfp(ConvId, _, _)).
 
 // =============================================================================
 // Pricing strategies
@@ -74,15 +76,18 @@
 +!exec_timed(Me, ConvId, Initiator, R) : R < 0.33
    <- .wait(500);
       .println("[", Me, "] done ", ConvId, " (500ms)");
-      .send(Initiator, tell, inform_done(ConvId)).
+      .send(Initiator, tell, inform_done(ConvId));
+      .abolish(accept_proposal(ConvId, _)).
 +!exec_timed(Me, ConvId, Initiator, R) : R >= 0.33 & R < 0.67
    <- .wait(1000);
       .println("[", Me, "] done ", ConvId, " (1000ms)");
-      .send(Initiator, tell, inform_done(ConvId)).
+      .send(Initiator, tell, inform_done(ConvId));
+      .abolish(accept_proposal(ConvId, _)).
 +!exec_timed(Me, ConvId, Initiator, _)
    <- .wait(2000);
       .println("[", Me, "] done ", ConvId, " (2000ms)");
-      .send(Initiator, tell, inform_done(ConvId)).
+      .send(Initiator, tell, inform_done(ConvId));
+      .abolish(accept_proposal(ConvId, _)).
 
 // =============================================================================
 // Handle rejection -- log and clean up
