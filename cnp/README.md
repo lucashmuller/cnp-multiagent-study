@@ -84,6 +84,10 @@ Estrategias de preco:
 Ao receber `accept_proposal`, simula execucao com tempo aleatorio (500ms, 1s ou 2s)
 e envia `inform_done` ao iniciador.
 
+Cada participante limpa as crencas de protocolo (`cfp`, `accept_proposal`,
+`reject_proposal`) apos process-las, evitando acumulo de estado conforme o numero
+de contratos cresce.
+
 ## Parametros de configuracao
 
 O arquivo `cnp.jcm` define n, m e i:
@@ -176,6 +180,11 @@ Executa as 6 configuracoes da `DEFAULT_MATRIX`, salva os logs em `results/` e im
 uma tabela comparativa ao final. Restaura o `cnp.jcm` baseline (n=5, m=10, i=3)
 automaticamente.
 
+A distribuicao de servicos entre participantes e feita apenas sobre os servicos
+que os iniciadores realmente solicitam. Ou seja, se nenhum iniciador pede `network`,
+nenhum participante oferece `network`. Isso evita falhas por servico sem oferta
+quando m e pequeno (ex.: n=1, m=2 com `service(network)` no iniciador).
+
 Para rodar uma unica configuracao sem alterar a matriz:
 
 ```bash
@@ -223,8 +232,10 @@ Cada contrato emite uma linha `[METRIC]` no formato:
 
 ## Interpretando os resultados
 
-- **success_pct < 100%** com `fail` alto indica m muito baixo ou distribuicao de servicos
-  incompativel (todos os participantes oferecem servico diferente do solicitado).
+- **success_pct < 100%** com `fail` alto indica m muito baixo (todos os participantes
+  com servico compativel ja estao ocupados em outros contratos paralelos). Quando o
+  `cnp.jcm` e gerado pelo `experiment.py`, distribuicoes incompativeis sao evitadas
+  automaticamente.
 - **avg_price cai** conforme m aumenta — mais competicao reduz o preco vencedor.
 - **latency ~3s** independente de n e m porque o gargalo e o `.wait(3000)` fixo do CFP.
   Variacoes acima de 3s vem do tempo de execucao simulado (500ms–2000ms).
